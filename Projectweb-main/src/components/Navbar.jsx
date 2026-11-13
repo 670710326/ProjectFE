@@ -28,6 +28,7 @@ export default function Navbar() {
       <NavLink to="/manga">มังงะทั้งหมด</NavLink>
       <NavLink to="/lab">API Lab</NavLink>
       <NavLink to="/about">เกี่ยวกับ</NavLink>
+      {role === 'admin' && <NavLink to="/admin">จัดการระบบ</NavLink>}
 
       <div className="navbar-auth">
         {!loading && member ? (
