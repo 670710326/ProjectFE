@@ -2,7 +2,8 @@
 import { onceADay } from './cache';
 
 const BASE = import.meta.env.VITE_API_BASE || '/mdx';
-const COVER_BASE = 'https://uploads.mangadex.org/covers';
+// ผ่าน proxy /covers (vite dev / vercel rewrites) ไปที่ uploads.mangadex.org/covers
+const COVER_BASE = '/covers';
 const RATINGS = ['safe', 'suggestive'];
 
 function toQuery(params) {
@@ -39,6 +40,22 @@ export async function request(path, params = {}) {
   return response.json();
 }
 
+// ล้างคำอธิบายเรื่อง: ตัดส่วน "Links:" และบรรทัดที่เป็นลิงก์/URL ออก เหลือแต่เรื่องย่อ
+export function cleanDescription(text = '') {
+  let t = String(text);
+  const cut = t.search(/\*{0,2}\s*(?:official\s+|external\s+)?links?\s*:\s*\*{0,2}/i);
+  if (cut >= 0) t = t.slice(0, cut);
+  return t
+    .split('\n')
+    .filter((line) => !/\]\(|https?:\/\//i.test(line))
+    .join('\n')
+    .replace(/\*\*|__/g, '')
+    .replace(/(^|\n)\s*[-*_]{3,}\s*(?=\n|$)/g, '$1')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[\s\-*_]+$/, '')
+    .trim();
+}
+
 const pick = (obj) =>
   obj?.en || obj?.th || obj?.['ja-ro'] || Object.values(obj || {})[0] || '';
 
@@ -51,9 +68,10 @@ export function normalizeManga(manga) {
   return {
     id: manga.id,
     title: pick(attributes.title) || 'ไม่มีชื่อเรื่อง',
-    description: pick(attributes.description),
+    description: cleanDescription(pick(attributes.description)),
     status: attributes.status || 'unknown',
     year: attributes.year || null,
+    languages: attributes.availableTranslatedLanguages || [],
     tags: (attributes.tags || [])
       .map((tag) => pick(tag.attributes?.name))
       .filter(Boolean),
@@ -106,7 +124,7 @@ export async function getChapters(mangaId, lang = 'en') {
     order: { chapter: 'asc' },
     contentRating: RATINGS,
     includes: ['scanlation_group'],
-    limit: 100,
+    limit: 500,
   });
 
   return (json.data || [])
@@ -119,16 +137,67 @@ export async function getChapters(mangaId, lang = 'en') {
     }));
 }
 
+// ดึงตอนทุกภาษาที่เรื่องนั้นมี แล้วเก็บเฉพาะภาษาที่ "มีตอนให้อ่านจริง" (ตัดตอนที่ลิงก์ไปเว็บภายนอกทิ้ง)
+// คืนค่า [{ lang, chapters }] เรียง อังกฤษ -> ไทย -> ภาษาที่มีตอนมากสุด
+export async function getChaptersByLanguage(mangaId, languages = []) {
+  const limit = 500;
+  const all = [];
+  for (let offset = 0; offset < 3000; offset += limit) {
+    const json = await request(`/manga/${encodeURIComponent(mangaId)}/feed`, {
+      translatedLanguage: languages.length ? languages : undefined,
+      order: { chapter: 'asc' },
+      contentRating: RATINGS,
+      includeEmptyPages: 0,
+      includeFuturePublishAt: 0,
+      includeExternalUrl: 0,
+      limit,
+      offset,
+    });
+    const batch = json.data || [];
+    all.push(...batch);
+    if (batch.length === 0 || offset + limit >= (json.total || 0)) break;
+  }
+
+  const groups = new Map();
+  for (const chapter of all) {
+    const attrs = chapter.attributes || {};
+    if (attrs.externalUrl || !(attrs.pages > 0)) continue; // ตัดตอนลิงก์ภายนอก/ไม่มีรูป
+    const lang = attrs.translatedLanguage;
+    if (!lang) continue;
+    if (!groups.has(lang)) groups.set(lang, []);
+    groups.get(lang).push({
+      id: chapter.id,
+      chapter: attrs.chapter,
+      title: attrs.title,
+      pages: attrs.pages,
+    });
+  }
+
+  const rank = (lang) => (lang === 'en' ? 0 : lang === 'th' ? 1 : 2);
+  return [...groups.entries()]
+    .map(([lang, chapters]) => ({ lang, chapters }))
+    .sort((a, b) => rank(a.lang) - rank(b.lang) || b.chapters.length - a.chapters.length);
+}
+
+// ให้รูปมังงะผ่านเซิร์ฟเวอร์ของเรา (/img) เพราะเบราว์เซอร์บางเครือข่ายต่อเซิร์ฟเวอร์รูปของ MangaDex ตรง ๆ ไม่ได้
+const viaProxy = (url) => `/img?u=${encodeURIComponent(url)}`;
+
+// คืนค่า [{ src, fallback }] src = ภาพคุณภาพเต็ม, fallback = ภาพ data-saver (เล็กกว่า ใช้สำรองเมื่อรูปเต็มโหลดไม่ขึ้น)
+// forcePort443: ให้เซิร์ฟเวอร์รูปใช้พอร์ต 443 เพราะบางเครือข่ายบล็อกพอร์ตแปลก ๆ ของ MD@Home
 export async function getChapterPages(chapterId) {
-  const json = await request(`/at-home/server/${encodeURIComponent(chapterId)}`);
+  const json = await request(`/at-home/server/${encodeURIComponent(chapterId)}`, {
+    forcePort443: 'true',
+  });
   const hash = json.chapter?.hash;
-  const files = json.chapter?.data || [];
-  if (!json.baseUrl || !hash || files.length === 0) {
+  const full = json.chapter?.data || [];
+  const saver = json.chapter?.dataSaver || [];
+  if (!json.baseUrl || !hash || full.length === 0) {
     throw new Error('ไม่พบรูปภาพของตอนนี้');
   }
-  return files.map(
-    (file) => `${json.baseUrl}/data/${hash}/${file}`
-  );
+  return full.map((file, i) => ({
+    src: viaProxy(`${json.baseUrl}/data/${hash}/${file}`),
+    fallback: saver[i] ? viaProxy(`${json.baseUrl}/data-saver/${hash}/${saver[i]}`) : null,
+  }));
 }
 
 export { onceADay };

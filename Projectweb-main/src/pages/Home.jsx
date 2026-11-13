@@ -11,7 +11,7 @@ export default function Home() {
 
   return (
     <>
-      <DemoBanner show={status === 'error'} />
+      <DemoBanner show={status === 'error'} error={error} />
       <h1>มังงะแนะนำ</h1>
       {status === 'loading' ? (
         <p className="muted">กำลังโหลดมังงะแนะนำ…</p>

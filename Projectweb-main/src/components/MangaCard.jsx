@@ -13,6 +13,7 @@ export default function MangaCard({ manga }) {
           src={manga.cover}
           alt={manga.title}
           loading="lazy"
+          referrerPolicy="no-referrer"
           onError={() => setCoverFailed(true)}
         />
       ) : (
