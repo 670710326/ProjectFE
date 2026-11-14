@@ -210,3 +210,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* กล่องแทนรูปปกในตารางแอดมิน */
 .admin-table .cover-mini { width: 36px; height: 52px; border-radius: 4px; background: linear-gradient(145deg, #292f40, #171b25); }
+
+.review-item .admin-label,
+form.review .admin-label { margin-left: 6px; }
