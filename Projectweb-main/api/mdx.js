@@ -3,7 +3,9 @@ export default async function handler(req, res) {
   try {
     const url = new URL(req.url, 'http://local');
     const p = url.searchParams.get('p') || '';
+    // Vercel เติมพารามิเตอร์จาก rewrite (p, path) ลงใน query ต้องตัดออกก่อนส่งให้ MangaDex
     url.searchParams.delete('p');
+    url.searchParams.delete('path');
     const qs = url.searchParams.toString();
 
     const upstream = await fetch(`https://api.mangadex.org/${p}${qs ? `?${qs}` : ''}`, {
