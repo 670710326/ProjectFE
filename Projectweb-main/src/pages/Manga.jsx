@@ -5,7 +5,7 @@ import { proxiedThumb } from '../api/mangadex';
 import MangaGrid from '../components/MangaGrid';
 
 const FETCH = 50; // ดึงจากหลังบ้านทีละ 50 (เท่ากับหน้าแอดมิน)
-const PAGE = 48; // แสดงหน้าละ 48 เรื่อง
+const PAGE = 50; // แสดงหน้าละ 50 เรื่อง
 
 // แปลงข้อมูลจากฐานข้อมูลหลังบ้านให้อยู่ในรูปแบบที่ MangaCard ใช้
 const fromBackend = (m) => ({
@@ -70,10 +70,11 @@ export default function Manga() {
         />
         <button className="primary" type="submit">ค้นหา</button>
       </form>
-      {status === 'success' && (
+      {status === 'success' && items.length > 0 && (
         <p className="muted">
-          {query ? `พบ ${shown.length} เรื่อง จากทั้งหมด ${all.length} เรื่อง` : `มังงะทั้งหมด ${all.length} เรื่อง`}
-          {pages > 1 && ` · หน้า ${current}/${pages}`}
+          {(current - 1) * PAGE + 1}-{(current - 1) * PAGE + items.length}{' '}
+          {query ? `พบ ${shown.length} เรื่อง จากมังงะทั้งหมด ${all.length} เรื่อง` : `มังงะทั้งหมด ${all.length} เรื่อง`}{' '}
+          หน้าที่ {current}/{pages}
         </p>
       )}
       <MangaGrid status={status} items={items} error={error} />
