@@ -2,13 +2,21 @@
 export default async function handler(req, res) {
   try {
     const url = new URL(req.url, 'http://local');
+    const debug = url.searchParams.get('debug') === '1';
     const p = url.searchParams.get('p') || '';
     // Vercel เติมพารามิเตอร์จาก rewrite (p, path) ลงใน query ต้องตัดออกก่อนส่งให้ MangaDex
+    url.searchParams.delete('debug');
     url.searchParams.delete('p');
     url.searchParams.delete('path');
     const qs = url.searchParams.toString();
+    const target = `https://api.mangadex.org/${p}${qs ? `?${qs}` : ''}`;
 
-    const upstream = await fetch(`https://api.mangadex.org/${p}${qs ? `?${qs}` : ''}`, {
+    if (debug) {
+      res.setHeader('Content-Type', 'application/json');
+      return res.end(JSON.stringify({ version: 'v3', rawUrl: req.url, p, qs, target }));
+    }
+
+    const upstream = await fetch(target, {
       headers: { 'User-Agent': 'MangaHub/0.1', Accept: 'application/json' },
       signal: AbortSignal.timeout(20000),
     });
