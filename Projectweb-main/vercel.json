@@ -3,7 +3,7 @@
     { "source": "/mdx/:path*", "destination": "/api/mdx?p=:path*" },
     { "source": "/covers/:path*", "destination": "/api/covers?p=:path*" },
     { "source": "/img", "destination": "/api/img" },
-    { "source": "/api/:path((?!mdx$|covers$|img$).*)", "destination": "https://test-backend-7ufb.onrender.com" },
+    { "source": "/api/:path((?!mdx$|covers$|img$).*)", "destination": "https://test-backend-7ufb.onrender.com/api/:path" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
