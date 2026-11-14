@@ -1,8 +1,9 @@
 {
   "rewrites": [
-    { "source": "/mdx/:path*", "destination": "https://api.mangadex.org/:path*" },
-    { "source": "/covers/:path*", "destination": "https://uploads.mangadex.org/covers/:path*" },
+    { "source": "/mdx/:path*", "destination": "/api/mdx?p=:path*" },
+    { "source": "/covers/:path*", "destination": "/api/covers?p=:path*" },
     { "source": "/img", "destination": "/api/img" },
+    { "source": "/api/:path((?!mdx$|covers$|img$).*)", "destination": "https://test-backend-7ufb.onrender.com" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

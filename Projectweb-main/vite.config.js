@@ -13,6 +13,10 @@ const imgProxy = () => ({
   },
 });
 
+// ปลายทาง Backend: ค่าเริ่มต้นคือเครื่องเดียวกัน
+// ถ้า backend อยู่อีก Codespace ให้รัน: API_TARGET=https://xxxx-8000.app.github.dev npm run dev
+const API_TARGET = process.env.API_TARGET || 'http://127.0.0.1:8000';
+
 export default defineConfig({
   plugins: [react(), imgProxy()],
   server: {
@@ -22,9 +26,14 @@ export default defineConfig({
     proxy: {
       // Backend Go API
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: API_TARGET,
         changeOrigin: true,
-        secure: false,
+        secure: API_TARGET.startsWith('https'),
+        configure: (proxy) => {
+          proxy.on('error', (err, req) => {
+            console.error('[proxy /api]', req.url, err.code || err.message);
+          });
+        },
       },
       // รูปปก MangaDex (ผ่าน server เพื่อเลี่ยง hotlink/เครือข่ายบล็อก)
       '/covers': {
