@@ -190,3 +190,23 @@ button.danger { background: transparent; border-color: #ff6b6b; color: #ff6b6b; 
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 .admin-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #2e9b5b; color: #fff; padding: 10px 18px; border-radius: 10px; z-index: 20; max-width: 90vw; }
 .admin-toast.bad { background: #d84a4a; }
+
+/* Reader: แถบเปลี่ยนตอน */
+.reader-nav { display: flex; gap: 8px; align-items: center; margin: 8px 0 16px; flex-wrap: wrap; }
+.reader-nav select { flex: 1; min-width: 0; max-width: 100%; text-overflow: ellipsis; }
+.reader-nav .reader-nav-back { color: var(--muted); font-size: 14px; padding: 0 4px; }
+.reader-nav .reader-nav-back:hover { color: var(--accent); }
+@media (max-width: 520px) {
+  .reader-nav select { order: -1; flex: 1 0 100%; }
+  .reader-nav button { flex: 1; }
+}
+
+/* ปุ่มเปลี่ยนหน้า */
+.pagination { display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap; margin: 24px 0; }
+.pagination button { min-width: 38px; }
+
+/* ปุ่มเลื่อนมังงะแนะนำ */
+.carousel button.nav:disabled { opacity: 0.35; cursor: default; }
+
+/* กล่องแทนรูปปกในตารางแอดมิน */
+.admin-table .cover-mini { width: 36px; height: 52px; border-radius: 4px; background: linear-gradient(145deg, #292f40, #171b25); }

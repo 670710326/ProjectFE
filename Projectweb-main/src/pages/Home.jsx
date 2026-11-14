@@ -7,7 +7,7 @@ import MangaGrid from '../components/MangaGrid';
 export default function Home() {
   const { status, data, error } = useAsync(() => getPopularManga(24), []);
   const items = data || [];
-  const featured = items.slice(0, 6);
+  const featured = items.slice(0, 12);
 
   return (
     <>

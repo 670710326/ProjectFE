@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { api } from '../api';
+import { proxiedThumb } from '../api/mangadex';
 import { useAuth } from '../context/AuthContext';
 
 const PAGE = 50;
@@ -89,6 +90,14 @@ function Overview({ token, notify }) {
       </section>
     </>
   );
+}
+
+// รูปปกในตาราง: ผ่าน proxy ของเรา (เครือข่ายบางที่ต่อ uploads.mangadex.org ตรง ๆ ไม่ได้) ถ้าโหลดไม่ได้แสดงกล่องสีแทนรูปแตก
+function AdminCover({ url }) {
+  const [failed, setFailed] = useState(false);
+  const src = proxiedThumb(url);
+  if (!src || failed) return <div className="cover-mini" aria-label="ไม่มีรูปปก" />;
+  return <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} />;
 }
 
 const EMPTY_FORM = {
@@ -257,7 +266,7 @@ function MangaTab({ token, notify }) {
                 {list.items.map((m) => (
                   <tr key={m.id}>
                     <td>
-                      {m.cover_url && <img src={m.cover_url} alt="" loading="lazy" referrerPolicy="no-referrer" />}
+                      <AdminCover url={m.cover_url} />
                     </td>
                     <td>
                       <div>{m.title}</div>

@@ -99,6 +99,27 @@ export async function searchManga({
   return (json.data || []).map(normalizeManga);
 }
 
+// เหมือน searchManga แต่คืน total ด้วย เพื่อทำปุ่มเปลี่ยนหน้า + กรองแนว (tags = id ของแนว) ที่ฝั่ง MangaDex
+export async function searchMangaPage({
+  title,
+  tags = [],
+  limit = 60,
+  offset = 0,
+  order = { followedCount: 'desc' },
+} = {}) {
+  const json = await request('/manga', {
+    title,
+    limit,
+    offset,
+    order,
+    includedTags: tags,
+    includes: ['cover_art'],
+    contentRating: RATINGS,
+    hasAvailableChapters: 'true',
+  });
+  return { items: (json.data || []).map(normalizeManga), total: json.total || 0 };
+}
+
 export async function getPopularManga(limit = 24) {
   return searchManga({ limit, order: { followedCount: 'desc' } });
 }
@@ -135,6 +156,20 @@ export async function getChapters(mangaId, lang = 'en') {
       title: chapter.attributes?.title,
       pages: chapter.attributes?.pages,
     }));
+}
+
+// ข้อมูลตอนเดียว: ใช้หาว่าตอนนี้อยู่เรื่องไหน/ภาษาอะไร เพื่อทำปุ่มตอนก่อนหน้า-ถัดไป
+export async function getChapterInfo(chapterId) {
+  const json = await request(`/chapter/${encodeURIComponent(chapterId)}`);
+  const data = json.data || {};
+  const attrs = data.attributes || {};
+  return {
+    id: data.id,
+    mangaId: data.relationships?.find((r) => r.type === 'manga')?.id || null,
+    lang: attrs.translatedLanguage || null,
+    chapter: attrs.chapter,
+    title: attrs.title,
+  };
 }
 
 // ดึงตอนทุกภาษาที่เรื่องนั้นมี แล้วเก็บเฉพาะภาษาที่ "มีตอนให้อ่านจริง" (ตัดตอนที่ลิงก์ไปเว็บภายนอกทิ้ง)
@@ -181,6 +216,24 @@ export async function getChaptersByLanguage(mangaId, languages = []) {
 
 // ให้รูปมังงะผ่านเซิร์ฟเวอร์ของเรา (/img) เพราะเบราว์เซอร์บางเครือข่ายต่อเซิร์ฟเวอร์รูปของ MangaDex ตรง ๆ ไม่ได้
 const viaProxy = (url) => `/img?u=${encodeURIComponent(url)}`;
+
+// รูปปกที่เป็นลิงก์ MangaDex (เช่น cover_url จาก Backend) ให้ผ่าน proxy ของเรา และใช้ไฟล์ย่อ .256.jpg ให้โหลดเร็ว
+export function proxiedThumb(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    const isMd = u.protocol === 'https:' && (u.hostname === 'mangadex.org' || u.hostname.endsWith('.mangadex.org') || u.hostname.endsWith('.mangadex.network'));
+    if (!isMd) return url;
+    const needsThumb =
+      u.hostname === 'uploads.mangadex.org' &&
+      /^\/covers\/[0-9a-f-]{36}\/[^/]+\.(jpe?g|png|webp)$/i.test(u.pathname) &&
+      !/\.(256|512)\.jpg$/i.test(u.pathname);
+    if (needsThumb) u.pathname += '.256.jpg';
+    return viaProxy(u.toString());
+  } catch {
+    return url;
+  }
+}
 
 // คืนค่า [{ src, fallback }] src = ภาพคุณภาพเต็ม, fallback = ภาพ data-saver (เล็กกว่า ใช้สำรองเมื่อรูปเต็มโหลดไม่ขึ้น)
 // forcePort443: ให้เซิร์ฟเวอร์รูปใช้พอร์ต 443 เพราะบางเครือข่ายบล็อกพอร์ตแปลก ๆ ของ MD@Home
