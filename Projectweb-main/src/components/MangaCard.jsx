@@ -24,7 +24,7 @@ export default function MangaCard({ manga }) {
       <div className="info">
         <div className="title">{manga.title}</div>
         <div className="muted" style={{ fontSize: 12 }}>
-          {manga.status}{manga.year ? ` · ${manga.year}` : ''}
+          {manga.subtitle ?? `${manga.status}${manga.year ? ` · ${manga.year}` : ''}`}
         </div>
       </div>
     </Link>
