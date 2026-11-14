@@ -5,7 +5,7 @@ import { handleImg } from './server/imgProxy.js';
 
 const API_TARGETS = [
   'http://127.0.0.1:8000',
-  'https://legendary-xylophone-97g6jgr5vq663p9v7-8000.app.github.dev',
+  'https://legendary-xylophone-97g6jgr5vq663p9v7-8000.app.github.dev/',
 ];
 
 // API Proxy with automatic fallback
